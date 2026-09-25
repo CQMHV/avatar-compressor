@@ -312,7 +312,7 @@ msgid "TextureCompressor:prop:minSourceSize"
 msgstr "最小來源尺寸"
 
 msgid "TextureCompressor:prop:minSourceSize:tooltip"
-msgstr "僅處理大於此尺寸的紋理"
+msgstr "處理長邊尺寸大於或等於此值的紋理"
 
 msgid "TextureCompressor:prop:skipIfSmaller"
 msgstr "小於此值時略過"
@@ -669,4 +669,4 @@ msgid "TextureCompressor:enum:skipReasonExcludedTexture"
 msgstr "紋理已排除"
 
 msgid "TextureCompressor:enum:skipReasonUnknownUncompressedProperty"
-msgstr "未知屬性上的未壓縮紋理（參見資料保護）"
+msgstr "未知屬性上的未壓縮紋理"

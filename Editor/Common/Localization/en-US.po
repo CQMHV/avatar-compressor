@@ -313,7 +313,7 @@ msgid "TextureCompressor:prop:minSourceSize"
 msgstr "Min Source Size"
 
 msgid "TextureCompressor:prop:minSourceSize:tooltip"
-msgstr "Only process textures larger than this size"
+msgstr "Process textures whose longest side is at least this size"
 
 msgid "TextureCompressor:prop:skipIfSmaller"
 msgstr "Skip If Smaller Than"
@@ -670,4 +670,4 @@ msgid "TextureCompressor:enum:skipReasonExcludedTexture"
 msgstr "Excluded texture"
 
 msgid "TextureCompressor:enum:skipReasonUnknownUncompressedProperty"
-msgstr "Uncompressed on unknown property (see Data Protection)"
+msgstr "Uncompressed on unknown property"

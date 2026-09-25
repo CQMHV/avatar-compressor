@@ -312,7 +312,7 @@ msgid "TextureCompressor:prop:minSourceSize"
 msgstr "最小ソースサイズ"
 
 msgid "TextureCompressor:prop:minSourceSize:tooltip"
-msgstr "このサイズより大きいテクスチャだけを処理します"
+msgstr "長辺がこのサイズ以上のテクスチャを処理します"
 
 msgid "TextureCompressor:prop:skipIfSmaller"
 msgstr "これ以下ならスキップ"
@@ -381,7 +381,7 @@ msgid "TextureCompressor:prop:skipUnknownUncompressed"
 msgstr "不明なプロパティの非圧縮テクスチャをスキップ"
 
 msgid "TextureCompressor:prop:skipUnknownUncompressed:tooltip"
-msgstr "不明なシェーダープロパティには Mask や LUT などの非表示データが含まれ、圧縮で破損する可能性があります。"
+msgstr "不明なシェーダープロパティには Mask や LUT など、画像として直接表示しないデータが含まれ、圧縮で破損する可能性があります。"
 
 msgid "TextureCompressor:label:excludedTextures"
 msgstr "テクスチャ"
@@ -669,4 +669,4 @@ msgid "TextureCompressor:enum:skipReasonExcludedTexture"
 msgstr "除外テクスチャ"
 
 msgid "TextureCompressor:enum:skipReasonUnknownUncompressedProperty"
-msgstr "不明なプロパティの非圧縮テクスチャ（データ保護を参照）"
+msgstr "不明なプロパティの非圧縮テクスチャ"

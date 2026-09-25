@@ -228,6 +228,20 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
                     GUILayout.MaxHeight(300)
                 );
 
+                float thumbnailColumnWidth = 45f;
+                foreach (
+                    TexturePropertyCategory category in System.Enum.GetValues(
+                        typeof(TexturePropertyCategory)
+                    )
+                )
+                {
+                    var label = new GUIContent(TextureCompressorEnumLabels.Text(category));
+                    thumbnailColumnWidth = Mathf.Max(
+                        thumbnailColumnWidth,
+                        Mathf.Ceil(EditorStylesCache.CenteredBoldLabel.CalcSize(label).x)
+                    );
+                }
+
                 bool hasDrawnProcessedHeader = false;
                 bool hasDrawnFrozenHeader = false;
                 bool hasDrawnSkippedHeader = false;
@@ -276,7 +290,7 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
                         hasDrawnSkippedHeader = true;
                     }
 
-                    DrawPreviewEntry(config, data);
+                    DrawPreviewEntry(config, data, thumbnailColumnWidth);
                 }
 
                 EditorGUILayout.EndScrollView();
@@ -301,7 +315,11 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
             }
         }
 
-        private void DrawPreviewEntry(TextureCompressor config, TexturePreviewData data)
+        private void DrawPreviewEntry(
+            TextureCompressor config,
+            TexturePreviewData data,
+            float thumbnailColumnWidth
+        )
         {
             bool isSkipped = !data.IsProcessed;
             bool frozenStateChanged = data.IsFrozen != config.IsFrozen(data.Guid);
@@ -313,9 +331,9 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
 
             EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
 
-            EditorGUILayout.BeginVertical(GUILayout.Width(45));
+            EditorGUILayout.BeginVertical(GUILayout.Width(thumbnailColumnWidth));
             EditorGUILayout.Space(2);
-            EditorGUILayout.BeginHorizontal(GUILayout.Width(45));
+            EditorGUILayout.BeginHorizontal(GUILayout.Width(thumbnailColumnWidth));
             GUILayout.FlexibleSpace();
             ThumbnailControl.DrawClickable(data.Texture);
             GUILayout.FlexibleSpace();
@@ -323,7 +341,7 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
             EditorGUILayout.LabelField(
                 TextureCompressorEnumLabels.Text(data.TextureType),
                 EditorStylesCache.CenteredBoldLabel,
-                GUILayout.Width(45)
+                GUILayout.Width(thumbnailColumnWidth)
             );
             EditorGUILayout.EndVertical();
 

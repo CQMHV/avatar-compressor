@@ -312,7 +312,7 @@ msgid "TextureCompressor:prop:minSourceSize"
 msgstr "최소 원본 크기"
 
 msgid "TextureCompressor:prop:minSourceSize:tooltip"
-msgstr "이 크기보다 큰 텍스처만 처리합니다"
+msgstr "가장 긴 변의 길이가 이 크기 이상인 텍스처를 처리합니다"
 
 msgid "TextureCompressor:prop:skipIfSmaller"
 msgstr "이 크기 이하면 건너뛰기"
@@ -669,4 +669,4 @@ msgid "TextureCompressor:enum:skipReasonExcludedTexture"
 msgstr "제외된 텍스처"
 
 msgid "TextureCompressor:enum:skipReasonUnknownUncompressedProperty"
-msgstr "알 수 없는 속성의 비압축 텍스처(데이터 보호 참조)"
+msgstr "알 수 없는 속성의 비압축 텍스처"
