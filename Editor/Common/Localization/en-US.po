@@ -9,9 +9,6 @@ msgstr "Cancel"
 msgid "Common:label:close"
 msgstr "Close"
 
-msgid "Common:label:notAvailable"
-msgstr "N/A"
-
 msgid "Common:message:avatarRootWarning"
 msgstr "This component should be placed on the avatar root GameObject. While it will still work, placing it on the avatar root is recommended."
 

@@ -6,10 +6,7 @@ using UnityEngine;
 namespace dev.limitex.avatar.compressor.editor
 {
     /// <summary>
-    /// Shared editor preferences for Avatar Compressor.
-    /// Hosts the General and Language sections and draws sections contributed by
-    /// features through IPreferencesSection.
-    /// Accessible via Edit > Preferences > Avatar Compressor.
+    /// Hosts shared preferences and sections contributed through IPreferencesSection.
     /// </summary>
     internal static class AvatarCompressorPreferences
     {
@@ -67,19 +64,8 @@ namespace dev.limitex.avatar.compressor.editor
         {
             var sections = CreateSections(TypeCache.GetTypesDerivedFrom<IPreferencesSection>());
 
-            var keywords = new HashSet<string>
-            {
-                "Avatar",
-                "Compressor",
-                "LAC",
-                "Log",
-                "Debug",
-                "Language",
-                "语言",
-                "語言",
-                "言語",
-                "언어",
-            };
+            var keywords = new HashSet<string> { "Avatar", "Compressor", "LAC", "Log", "Debug" };
+            keywords.UnionWith(AvatarCompressorLocalization.Translations("Common:label:language"));
             foreach (var section in sections)
             {
                 keywords.UnionWith(section.Keywords);

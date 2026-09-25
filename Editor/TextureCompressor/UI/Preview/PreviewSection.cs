@@ -95,7 +95,14 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
 
             bool isSearching = _searchBox.IsSearching;
             int totalCount = _previewData.Length;
-            int filteredCount = _searchBox.CountMatches(_previewData, MatchesPreviewSearch);
+            int filteredCount = _searchBox.CountMatches(
+                _previewData,
+                MatchesPreviewSearch,
+                (
+                    AvatarCompressorLocalization.CurrentLanguage,
+                    AvatarCompressorLocalization.CatalogRevision
+                )
+            );
 
             // Build header text
             string headerText;
@@ -150,7 +157,7 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(
                 AvatarCompressorLocalization.Tr("TextureCompressor:label:previewOriginal"),
-                GUILayout.Width(75)
+                GUILayout.Width(80)
             );
             EditorGUILayout.LabelField(
                 MemoryCalculator.FormatBytes(totalOriginal),
@@ -161,7 +168,7 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(
                 AvatarCompressorLocalization.Tr("TextureCompressor:label:previewAfter"),
-                GUILayout.Width(75)
+                GUILayout.Width(80)
             );
             EditorGUILayout.LabelField(
                 MemoryCalculator.FormatBytes(totalAfter),
@@ -172,7 +179,7 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
             EditorGUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(
                 AvatarCompressorLocalization.Tr("TextureCompressor:label:previewSavings"),
-                GUILayout.Width(75)
+                GUILayout.Width(80)
             );
             Color originalColor = GUI.color;
             GUI.color = Color.green;
@@ -314,7 +321,7 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
             GUILayout.FlexibleSpace();
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.LabelField(
-                AvatarCompressorLocalization.EnumValue("TextureCompressor", data.TextureType),
+                TextureCompressorEnumLabels.Text(data.TextureType),
                 EditorStylesCache.CenteredBoldLabel,
                 GUILayout.Width(45)
             );
@@ -478,7 +485,7 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
             else
             {
                 EditorGUILayout.LabelField(
-                    AvatarCompressorLocalization.Tr("Common:label:notAvailable"),
+                    EditorDrawUtils.NotAvailableText,
                     EditorStyles.miniLabel
                 );
             }
@@ -500,10 +507,7 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
                 AvatarCompressorLocalization.Tr("TextureCompressor:label:previewReason"),
                 GUILayout.Width(85)
             );
-            string reasonText = AvatarCompressorLocalization.EnumValue(
-                "TextureCompressor",
-                data.SkipReason
-            );
+            string reasonText = TextureCompressorEnumLabels.Text(data.SkipReason);
             EditorGUILayout.LabelField(reasonText, EditorStyles.miniLabel);
             EditorGUILayout.EndHorizontal();
         }
@@ -517,7 +521,7 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
                 textureName,
                 assetPath,
                 data.TextureType.ToString(),
-                AvatarCompressorLocalization.EnumValue("TextureCompressor", data.TextureType)
+                TextureCompressorEnumLabels.Text(data.TextureType)
             );
         }
     }

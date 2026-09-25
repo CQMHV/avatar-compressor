@@ -220,10 +220,10 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
             );
 
             EditorGUI.BeginChangeCheck();
-            var newFormat = AvatarCompressorLocalization.EnumPopup(
-                "TextureCompressor",
+            var newFormat = LocalizedEnumPopup.Draw(
                 GUIContent.none,
-                frozen.Format
+                frozen.Format,
+                TextureCompressorEnumLabels.Text
             );
             if (EditorGUI.EndChangeCheck())
             {

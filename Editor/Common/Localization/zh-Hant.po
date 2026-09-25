@@ -8,9 +8,6 @@ msgstr "取消"
 msgid "Common:label:close"
 msgstr "關閉"
 
-msgid "Common:label:notAvailable"
-msgstr "N/A"
-
 msgid "Common:message:avatarRootWarning"
 msgstr "此元件應放置在 Avatar 根 GameObject 上。放在其他位置仍可運作，但建議放置在 Avatar 根物件上。"
 
