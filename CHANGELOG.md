@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Preview search results and counts follow the current translations, and texture type labels size to fit translated text
 - **Localization regression tests** - Cover catalog loading and reloading, UI refresh, multi-object editing, Undo/Redo, and prefab overrides
 
+### Fixed
+
+- Preserve Git metadata when preparing the CI Unity project so GameCI can detect the repository before running tests.
+
 ## [v0.9.0] - 2026-07-17
 
 ### Added
