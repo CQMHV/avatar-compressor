@@ -13,6 +13,16 @@ namespace dev.limitex.avatar.compressor.editor
     {
         protected bool _showAdvancedSettings;
 
+        protected virtual void OnEnable()
+        {
+            AvatarCompressorLocalization.Changed += Repaint;
+        }
+
+        protected virtual void OnDisable()
+        {
+            AvatarCompressorLocalization.Changed -= Repaint;
+        }
+
         /// <summary>
         /// Main inspector GUI entry point. Implements common structure for all compressor editors.
         /// </summary>

@@ -233,6 +233,34 @@ namespace dev.limitex.avatar.compressor.tests
             yield return WaitForTranslation(TemporaryCatalog.Key, "translated");
         }
 
+        [UnityTest]
+        public IEnumerator CatalogReimport_NotifiesWithUpdatedTranslationInSameLanguage()
+        {
+            var catalog = _temporaryCatalog = new TemporaryCatalog();
+            LanguagePrefs.Language = catalog.Language;
+            catalog.Import();
+            yield return WaitForTranslation(TemporaryCatalog.Key, "translated");
+            yield return WaitForEditorCallbacks();
+
+            var observed = new List<string>();
+            void OnChanged() => observed.Add(AvatarCompressorLocalization.Tr(TemporaryCatalog.Key));
+            AvatarCompressorLocalization.Changed += OnChanged;
+            try
+            {
+                catalog.Import("updated");
+                yield return WaitForEditorCallbacks();
+                CollectionAssert.AreEqual(new[] { "updated" }, observed);
+                Assert.AreEqual(
+                    catalog.Language.ToLowerInvariant(),
+                    AvatarCompressorLocalization.CurrentLanguage
+                );
+            }
+            finally
+            {
+                AvatarCompressorLocalization.Changed -= OnChanged;
+            }
+        }
+
         private static IEnumerator WaitForTranslation(string key, string expected)
         {
             yield return null;
@@ -282,12 +310,12 @@ namespace dev.limitex.avatar.compressor.tests
                 Assert.IsFalse(File.Exists(_physicalPath + ".meta"));
             }
 
-            internal void Import()
+            internal void Import(string translation = "translated")
             {
                 File.WriteAllText(
                     _physicalPath,
                     $"msgid \"\"\nmsgstr \"\"\n\"Language: {Language}\\n\"\n\n"
-                        + $"msgid \"{Key}\"\nmsgstr \"translated\"\n"
+                        + $"msgid \"{Key}\"\nmsgstr \"{translation}\"\n"
                 );
                 AssetDatabase.ImportAsset(_assetPath, ImportAssetOptions.ForceSynchronousImport);
             }

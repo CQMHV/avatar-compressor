@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.IO;
 using nadena.dev.ndmf.localization;
 using NUnit.Framework;
@@ -50,6 +51,28 @@ namespace dev.limitex.avatar.compressor.tests
         protected static void DeleteTempAsset(string path)
         {
             AssetDatabase.DeleteAsset(path);
+        }
+
+        protected static IEnumerator WaitForEditorCallbacks()
+        {
+            // Catalog reloads can enqueue a notification for the following editor tick.
+            for (int i = 0; i < 2; i++)
+            {
+                bool called = false;
+                void Callback() => called = true;
+                EditorApplication.delayCall += Callback;
+                try
+                {
+                    double deadline = EditorApplication.timeSinceStartup + 5;
+                    while (!called && EditorApplication.timeSinceStartup < deadline)
+                        yield return null;
+                    Assert.IsTrue(called, "Editor delayCall did not run.");
+                }
+                finally
+                {
+                    EditorApplication.delayCall -= Callback;
+                }
+            }
         }
     }
 }

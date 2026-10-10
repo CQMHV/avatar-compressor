@@ -71,7 +71,7 @@ namespace dev.limitex.avatar.compressor.editor
                 keywords.UnionWith(section.Keywords);
             }
 
-            return new SettingsProvider(BasePath, SettingsScope.User)
+            var provider = new SettingsProvider(BasePath, SettingsScope.User)
             {
                 label = "Avatar Compressor",
                 guiHandler = _ =>
@@ -108,6 +108,11 @@ namespace dev.limitex.avatar.compressor.editor
                 },
                 keywords = keywords,
             };
+            provider.activateHandler = (_, __) =>
+                AvatarCompressorLocalization.Changed += provider.Repaint;
+            provider.deactivateHandler = () =>
+                AvatarCompressorLocalization.Changed -= provider.Repaint;
+            return provider;
         }
     }
 }

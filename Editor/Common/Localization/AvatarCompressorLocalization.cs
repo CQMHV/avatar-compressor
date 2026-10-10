@@ -17,10 +17,20 @@ namespace dev.limitex.avatar.compressor.editor
 
         internal static int CatalogRevision { get; private set; }
 
+        internal static event Action Changed;
+
+        private static readonly object LanguageChangeHandle = new object();
+        private static bool _notificationScheduled;
+
         internal static readonly Localizer Localizer = new Localizer("en-US", LoadCatalog);
 
-        // Register locales before the language picker runs.
-        static AvatarCompressorLocalization() { }
+        static AvatarCompressorLocalization()
+        {
+            LanguagePrefs.RegisterLanguageChangeCallback(
+                LanguageChangeHandle,
+                _ => ScheduleNotification()
+            );
+        }
 
         internal static string Tr(string key)
         {
@@ -69,7 +79,24 @@ namespace dev.limitex.avatar.compressor.editor
             {
                 CatalogRevision++;
             }
+            // Defer notification until NDMF has installed the new catalog.
+            ScheduleNotification();
             return localizations;
+        }
+
+        private static void ScheduleNotification()
+        {
+            if (_notificationScheduled)
+                return;
+
+            _notificationScheduled = true;
+            EditorApplication.delayCall += NotifyChanged;
+        }
+
+        private static void NotifyChanged()
+        {
+            _notificationScheduled = false;
+            Changed?.Invoke();
         }
 
         internal static List<(string Language, Func<string, string> Lookup)> LoadLocalizations()

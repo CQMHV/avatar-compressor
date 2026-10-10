@@ -9,6 +9,16 @@ namespace dev.limitex.avatar.compressor.editor.texture
     [CanEditMultipleObjects]
     internal sealed class CustomTextureCompressorPresetEditor : Editor
     {
+        private void OnEnable()
+        {
+            AvatarCompressorLocalization.Changed += Repaint;
+        }
+
+        private void OnDisable()
+        {
+            AvatarCompressorLocalization.Changed -= Repaint;
+        }
+
         public override void OnInspectorGUI()
         {
             serializedObject.Update();
