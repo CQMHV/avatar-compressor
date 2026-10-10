@@ -15,7 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Pull requests limited to `Editor/Common/Localization/` do not require a changelog entry
 - **Live translation updates** - Apply language changes and translation catalog updates to open compressor inspectors, custom preset inspectors, and Preferences
   - Preview search results and counts follow the current translations, and texture type labels size to fit translated text
-- **Localization regression tests** - Cover catalog loading and reloading, UI refresh, multi-object editing, Undo/Redo, and prefab overrides
 
 ### Fixed
 

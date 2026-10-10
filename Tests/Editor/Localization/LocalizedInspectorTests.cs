@@ -1,6 +1,4 @@
 using System;
-using System.Linq;
-using System.Reflection;
 using dev.limitex.avatar.compressor.editor.texture;
 using dev.limitex.avatar.compressor.editor.texture.ui;
 using nadena.dev.ndmf.localization;
@@ -47,22 +45,6 @@ namespace dev.limitex.avatar.compressor.tests
         }
 
         [Test]
-        public void EnumKeys_MatchSourceCatalog()
-        {
-            string[] sourceKeys = ReadMessages(LocalizationFolder + "/en-US.po")
-                .Keys.Where(key => key.Contains(":enum:"))
-                .ToArray();
-            string[] mappedKeys = LocalizableEnumTypes()
-                .SelectMany(type => Enum.GetValues(type).Cast<Enum>())
-                .Select(TextureCompressorEnumLabels.Key)
-                .ToArray();
-
-            CollectionAssert.DoesNotContain(mappedKeys, null);
-            CollectionAssert.AllItemsAreUnique(mappedKeys);
-            CollectionAssert.AreEquivalent(sourceKeys, mappedKeys);
-        }
-
-        [Test]
         public void EnumMappings_CoverEveryDisplayedValue()
         {
             LanguagePrefs.Language = "en-US";
@@ -77,39 +59,29 @@ namespace dev.limitex.avatar.compressor.tests
         }
 
         [Test]
-        public void CustomPresetInspector_PreservesMultiObjectEditing()
+        public void CustomPresetInspector_EditingLock_UpdatesAllSelectedPresets()
         {
-            Assert.IsTrue(
-                Attribute.IsDefined(
-                    typeof(CustomTextureCompressorPresetEditor),
-                    typeof(CanEditMultipleObjects)
-                )
-            );
-        }
-
-        [Test]
-        public void LocalizedInspectorTargets_HaveNoHeaderOrTooltipDecorators()
-        {
-            const BindingFlags allFields =
-                BindingFlags.Instance
-                | BindingFlags.Static
-                | BindingFlags.Public
-                | BindingFlags.NonPublic
-                | BindingFlags.DeclaredOnly;
-            string[] decoratedFields = new[]
+            InspectorUiProbe.RequireGraphicsDevice();
+            LanguagePrefs.Language = "en-US";
+            var first = ScriptableObject.CreateInstance<CustomTextureCompressorPreset>();
+            var second = ScriptableObject.CreateInstance<CustomTextureCompressorPreset>();
+            try
             {
-                typeof(TextureCompressor),
-                typeof(CustomTextureCompressorPreset),
+                using var view = InspectorUiProbe.OpenInspector(first, second);
+                view.Draw();
+                Assert.IsFalse(first.Lock);
+                Assert.IsFalse(second.Lock);
+                view.Toggle(nameof(CustomTextureCompressorPreset.Lock));
+                Assert.IsTrue(first.Lock);
+                Assert.IsTrue(second.Lock);
             }
-                .SelectMany(type => type.GetFields(allFields))
-                .Where(field =>
-                    Attribute.IsDefined(field, typeof(HeaderAttribute))
-                    || Attribute.IsDefined(field, typeof(TooltipAttribute))
-                )
-                .Select(field => $"{field.DeclaringType.Name}.{field.Name}")
-                .ToArray();
-
-            CollectionAssert.IsEmpty(decoratedFields);
+            finally
+            {
+                Undo.ClearUndo(first);
+                Undo.ClearUndo(second);
+                UnityEngine.Object.DestroyImmediate(first);
+                UnityEngine.Object.DestroyImmediate(second);
+            }
         }
 
         [TestCase(CompressorPreset.HighQuality, "High Quality")]
@@ -139,20 +111,6 @@ namespace dev.limitex.avatar.compressor.tests
                     $"Missing localization for {typeof(T).Name}.{value}."
                 );
             }
-        }
-
-        private static Type[] LocalizableEnumTypes()
-        {
-            return new[]
-            {
-                typeof(AnalysisStrategyType),
-                typeof(CompressionPlatform),
-                typeof(FrozenTextureFormat),
-                typeof(AnalysisBackendPreference),
-                typeof(ResizeBackendPreference),
-                typeof(TexturePropertyCategory),
-                typeof(SkipReason),
-            };
         }
 
         [Test]

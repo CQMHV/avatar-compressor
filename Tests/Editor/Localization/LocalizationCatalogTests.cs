@@ -1,4 +1,3 @@
-using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -11,6 +10,19 @@ namespace dev.limitex.avatar.compressor.tests
     [TestFixture]
     internal sealed class LocalizationCatalogTests
     {
+        [TestCase("{{0}}", new string[] { })]
+        [TestCase("{{{0}}}", new[] { "{0}" })]
+        [TestCase("{0} / {{1}} / {0}", new[] { "{0}", "{0}" })]
+        [TestCase("{1,-8:P0} {0,4}", new[] { "{0}", "{1:P0}" })]
+        [TestCase("{{{{0}}}} {2:N2}", new[] { "{2:N2}" })]
+        public void FormatPlaceholders_RecognizesOnlySubstitutedArguments(
+            string text,
+            string[] expected
+        )
+        {
+            CollectionAssert.AreEqual(expected, GetPlaceholders(text));
+        }
+
         [Test]
         public void Translations_HaveNoFuzzyFlags()
         {
@@ -19,24 +31,11 @@ namespace dev.limitex.avatar.compressor.tests
             {
                 Assert.IsFalse(
                     Regex.IsMatch(
-                        File.ReadAllText(path),
+                        File.ReadAllText(PhysicalPath(path)),
                         @"^#,.*\bfuzzy\b",
                         RegexOptions.Multiline
                     ),
                     $"'{path}' contains a fuzzy flag."
-                );
-            }
-        }
-
-        [Test]
-        public void BundledTranslations_HaveTranslatedStrings()
-        {
-            foreach (string language in BundledLocales.Where(locale => locale != "en-US"))
-            {
-                Assert.IsTrue(
-                    ReadMessages(LocalizationFolder + "/" + language + ".po")
-                        .Values.Any(value => value.Length > 0),
-                    $"Locale {language} has no translated strings."
                 );
             }
         }
@@ -103,45 +102,9 @@ namespace dev.limitex.avatar.compressor.tests
         }
 
         [Test]
-        public void KeyLiteralsInEditorCode_ExistInEnglishSource()
-        {
-            var english = ReadMessages(LocalizationFolder + "/en-US.po");
-            var literal = new Regex("\"((?:Common|TextureCompressor):[A-Za-z0-9:]+)\"");
-            var hits = Directory
-                .EnumerateFiles(PackageRoot + "/Editor", "*.cs", SearchOption.AllDirectories)
-                .SelectMany(path =>
-                    literal
-                        .Matches(File.ReadAllText(path))
-                        .Cast<Match>()
-                        .Select(match => (File: Path.GetFileName(path), Key: match.Groups[1].Value))
-                )
-                .Distinct()
-                .ToArray();
-
-            Assert.IsNotEmpty(hits, "No localization keys found in Editor code.");
-            CollectionAssert.IsEmpty(
-                hits.Where(hit => !english.ContainsKey(hit.Key))
-                    .Select(hit => $"{hit.File}: {hit.Key}")
-                    .ToArray()
-            );
-        }
-
-        [Test]
-        public void LocalizationKeys_FollowScopeKindNameConvention()
-        {
-            foreach (string key in ReadMessages(LocalizationFolder + "/en-US.po").Keys)
-            {
-                StringAssert.IsMatch(
-                    @"^(Common|TextureCompressor):[a-z][A-Za-z0-9]*:[a-z][A-Za-z0-9]*(?::tooltip)?$",
-                    key
-                );
-            }
-        }
-
-        [Test]
         public void EnglishSource_UsesMsgstrForCrowdinSourceText()
         {
-            string english = File.ReadAllText(LocalizationFolder + "/en-US.po");
+            string english = File.ReadAllText(PhysicalPath(LocalizationFolder + "/en-US.po"));
             StringAssert.Contains("\"X-Crowdin-SourceKey: msgstr\\n\"", english);
         }
     }

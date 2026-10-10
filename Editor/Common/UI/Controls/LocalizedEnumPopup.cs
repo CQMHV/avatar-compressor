@@ -16,7 +16,8 @@ namespace dev.limitex.avatar.compressor.editor.ui
         public static void DrawProperty<T>(
             SerializedProperty property,
             GUIContent label,
-            Func<T, string> displayName
+            Func<T, string> displayName,
+            Func<Rect, GUIContent, int, GUIContent[], int> popup = null
         )
             where T : struct, Enum
         {
@@ -28,7 +29,7 @@ namespace dev.limitex.avatar.compressor.editor.ui
             EditorGUI.BeginChangeCheck();
 
             var currentValue = (T)Enum.ToObject(typeof(T), property.intValue);
-            var newValue = Draw(position, label, currentValue, displayName);
+            var newValue = Draw(position, label, currentValue, displayName, popup);
             if (EditorGUI.EndChangeCheck())
             {
                 property.intValue = Convert.ToInt32(newValue);
@@ -42,14 +43,18 @@ namespace dev.limitex.avatar.compressor.editor.ui
             Rect position,
             GUIContent label,
             T value,
-            Func<T, string> displayName
+            Func<T, string> displayName,
+            Func<Rect, GUIContent, int, GUIContent[], int> popup = null
         )
             where T : struct, Enum
         {
             var values = (T[])Enum.GetValues(typeof(T));
             var displayNames = values.Select(entry => new GUIContent(displayName(entry))).ToArray();
             int currentIndex = Array.IndexOf(values, value);
-            int newIndex = EditorGUI.Popup(position, label, currentIndex, displayNames);
+            int newIndex =
+                popup != null
+                    ? popup(position, label, currentIndex, displayNames)
+                    : EditorGUI.Popup(position, label, currentIndex, displayNames);
             return newIndex >= 0 && newIndex < values.Length ? values[newIndex] : value;
         }
     }

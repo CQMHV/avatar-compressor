@@ -67,7 +67,6 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
                 return;
             }
 
-            // TODO: Remove this call after users have migrated from TexturePath to TextureGuid
             DrawLegacyPathMigrationUI(config);
 
             // Only use ScrollView when there are many visible items (3+)
@@ -248,7 +247,7 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
             }
         }
 
-        // TODO: Remove this method after users have migrated from TexturePath to TextureGuid
+        // FormerlySerializedAs preserves old path strings but cannot convert them to GUIDs.
         private static void DrawLegacyPathMigrationUI(TextureCompressor config)
         {
             bool hasLegacyPaths = false;

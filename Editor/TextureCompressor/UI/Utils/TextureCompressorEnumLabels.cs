@@ -14,7 +14,7 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
         }
 
         // Keep translation keys stable when renaming enum types or members.
-        internal static string Key(Enum value)
+        private static string Key(Enum value)
         {
             return value switch
             {

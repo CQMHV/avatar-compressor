@@ -84,6 +84,7 @@ namespace dev.limitex.avatar.compressor.editor.texture
 
         private void DrawProperty(string propertyName)
         {
+            GUI.SetNextControlName(propertyName);
             EditorGUILayout.PropertyField(
                 serializedObject.FindProperty(propertyName),
                 TextureCompressorPropertyLabels.Content(propertyName),

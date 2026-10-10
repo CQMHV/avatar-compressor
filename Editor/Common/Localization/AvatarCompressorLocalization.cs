@@ -66,8 +66,11 @@ namespace dev.limitex.avatar.compressor.editor
 
         internal static string CurrentLanguage => LanguagePrefs.Language;
 
+        internal const string LanguagePickerControlName = "AvatarCompressor.LanguagePicker";
+
         internal static void DrawLanguagePicker()
         {
+            GUI.SetNextControlName(LanguagePickerControlName);
             LanguageSwitcher.DrawImmediate();
         }
 

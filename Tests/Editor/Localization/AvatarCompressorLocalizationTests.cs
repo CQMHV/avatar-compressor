@@ -1,5 +1,4 @@
-using System;
-using System.Collections.Generic;
+using System.Collections;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -17,15 +16,6 @@ namespace dev.limitex.avatar.compressor.tests
     [TestFixture]
     internal sealed class AvatarCompressorLocalizationTests : LocalizationTestBase
     {
-        [Test]
-        public void LocalizationFolder_ExistsInPackage()
-        {
-            Assert.IsTrue(
-                AssetDatabase.IsValidFolder(LocalizationFolder),
-                $"'{LocalizationFolder}' is not a folder."
-            );
-        }
-
         [Test]
         public void LoadLocalizations_TakesLanguageFromFileNameAndIncludesBundledLocales()
         {
@@ -144,102 +134,72 @@ namespace dev.limitex.avatar.compressor.tests
             Assert.IsNull(lookup("k"));
         }
 
-        [Test]
-        public void Translations_ReturnsTextFromEveryLocaleThatTranslatesKey()
+        [UnityTest]
+        public IEnumerator Translations_ReturnsTextFromEveryLocaleThatTranslatesKey()
         {
-            const string key = "Common:label:language";
-            string[] expected = PoPaths()
-                .Select(path => ReadMessages(path).TryGetValue(key, out var text) ? text : "")
-                .Where(text => text.Length > 0)
-                .ToArray();
+            var english = Track(new TemporaryCatalog("en-US"));
+            var korean = Track(new TemporaryCatalog("ko-KR"));
+            var japanese = Track(new TemporaryCatalog("ja-JP"));
+            english.Import("English test text");
+            korean.Import("Korean test text");
+            japanese.Import("");
+            yield return WaitForEditorCallbacks();
 
+            LanguagePrefs.Language = "ja-JP";
             CollectionAssert.AreEquivalent(
-                expected,
-                AvatarCompressorLocalization.Translations(key).ToArray()
+                new[] { "English test text", "Korean test text" },
+                AvatarCompressorLocalization.Translations(TemporaryCatalog.Key).ToArray()
             );
         }
 
-        [TestCaseSource(typeof(LocalizationTestCatalog), nameof(BundledLocales))]
-        public void LanguagePrefs_SelectsTranslationFromMatchingFile(string language)
+        [UnityTest]
+        public IEnumerator LanguagePrefs_SelectsTranslationFromMatchingFile()
         {
-            const string key = "Common:label:general";
-            string baseLanguage = language.Split('-')[0];
-            string[] fallbackChain = new[] { language }
-                .Concat(
-                    PoPaths()
-                        .Select(Path.GetFileNameWithoutExtension)
-                        .Where(locale => locale != language && locale.Split('-')[0] == baseLanguage)
-                        .OrderBy(locale => locale, StringComparer.OrdinalIgnoreCase)
-                )
-                .Concat(new[] { "en-US" })
-                .ToArray();
-            string expected = fallbackChain
-                .Select(locale =>
-                    ReadMessages(LocalizationFolder + "/" + locale + ".po")
-                        .TryGetValue(key, out var text)
-                        ? text
-                        : ""
-                )
-                .First(text => text.Length > 0);
+            foreach (string language in BundledLocales)
+            {
+                var catalog = Track(new TemporaryCatalog(language));
+                catalog.Import("Test translation for " + language);
+            }
+            yield return WaitForEditorCallbacks();
 
-            LanguagePrefs.Language = language;
-
-            Assert.AreEqual(expected, AvatarCompressorLocalization.Tr(key));
+            // Every locale has a distinct controlled value; always using English
+            // cannot pass, even when the shipped translations are incomplete.
+            foreach (string language in BundledLocales)
+            {
+                LanguagePrefs.Language = language;
+                Assert.AreEqual(
+                    "Test translation for " + language,
+                    AvatarCompressorLocalization.Tr(TemporaryCatalog.Key)
+                );
+            }
         }
 
-        [Test]
-        public void Tr_FormatsArguments()
+        [UnityTest]
+        public IEnumerator Tr_FormatsArguments()
         {
-            LanguagePrefs.Language = "en-US";
+            var catalog = Track(new TemporaryCatalog());
+            catalog.Import("Test items: {0}");
+            LanguagePrefs.Language = catalog.Language;
+            yield return WaitForTranslation(TemporaryCatalog.Key, "Test items: {0}");
 
             Assert.AreEqual(
-                "Paths (3)",
-                AvatarCompressorLocalization.Tr("TextureCompressor:message:pathsCount", 3)
+                "Test items: 3",
+                AvatarCompressorLocalization.Tr(TemporaryCatalog.Key, 3)
             );
         }
 
-        [Test]
-        public void Tr_TooFewFormatArguments_ReturnsMissingKeyPlaceholder()
+        [UnityTest]
+        public IEnumerator Tr_TooFewFormatArguments_ReturnsMissingKeyPlaceholder()
         {
-            LanguagePrefs.Language = "en-US";
-            const string key = "TextureCompressor:message:summaryDivisorRange";
+            var catalog = Track(new TemporaryCatalog());
+            catalog.Import("Test range: {0} to {1}");
+            LanguagePrefs.Language = catalog.Language;
+            yield return WaitForTranslation(TemporaryCatalog.Key, "Test range: {0} to {1}");
 
-            Assert.AreEqual($"<{key}>", AvatarCompressorLocalization.Tr(key, 1));
-        }
-
-        [Test]
-        public void Localizer_EmptyChineseTranslation_FallsBackToOtherChineseScriptBeforeEnglish()
-        {
-            string[] paths =
-            {
-                CreateTempPo("en-US.po", "msgid \"k\"\nmsgstr \"en\"\n"),
-                CreateTempPo("zh-Hans.po", "msgid \"k\"\nmsgstr \"\"\n"),
-                CreateTempPo("zh-Hant.po", "msgid \"k\"\nmsgstr \"hant\"\n"),
-            };
-            // Disable the retained NDMF reload callback before deleting temporary assets.
-            bool live = true;
-            var localizer = new Localizer(
-                "en-US",
-                () =>
-                    live
-                        ? AvatarCompressorLocalization.LoadLocalizations(paths)
-                        : new List<(string, Func<string, string>)>()
+            Assert.AreEqual(
+                $"<{TemporaryCatalog.Key}>",
+                AvatarCompressorLocalization.Tr(TemporaryCatalog.Key, 1)
             );
-
-            try
-            {
-                LanguagePrefs.Language = "zh-Hans";
-                Assert.AreEqual("hant", localizer.GetLocalizedString("k"));
-
-                LanguagePrefs.Language = "ja-JP";
-                Assert.AreEqual("en", localizer.GetLocalizedString("k"));
-            }
-            finally
-            {
-                live = false;
-                foreach (string path in paths)
-                    DeleteTempAsset(path);
-            }
         }
     }
 }

@@ -26,9 +26,6 @@ namespace dev.limitex.avatar.compressor.editor
             set => EditorPrefs.SetBool(EnableLoggingKey, value);
         }
 
-        /// <summary>
-        /// Applies to both compressor component and custom preset inspectors.
-        /// </summary>
         public static bool ShowLanguagePickerInInspector
         {
             get => EditorPrefs.GetBool(ShowLanguagePickerInInspectorKey, true);
@@ -72,7 +69,7 @@ namespace dev.limitex.avatar.compressor.editor
         }
 
         [SettingsProvider]
-        private static SettingsProvider CreateProvider()
+        internal static SettingsProvider CreateProvider()
         {
             var sections = CreateSections(TypeCache.GetTypesDerivedFrom<IPreferencesSection>());
 
@@ -115,6 +112,7 @@ namespace dev.limitex.avatar.compressor.editor
                     AvatarCompressorLocalization.DrawLanguagePicker();
 
                     EditorGUI.BeginChangeCheck();
+                    GUI.SetNextControlName(nameof(ShowLanguagePickerInInspector));
                     var showLanguagePickerInInspector = EditorGUILayout.ToggleLeft(
                         AvatarCompressorLocalization.Content(
                             "Common:prop:showLanguagePickerInInspector",

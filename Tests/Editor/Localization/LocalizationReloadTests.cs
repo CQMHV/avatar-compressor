@@ -1,16 +1,13 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Text;
 using dev.limitex.avatar.compressor.editor;
+using dev.limitex.avatar.compressor.editor.texture;
+using dev.limitex.avatar.compressor.editor.texture.ui;
 using dev.limitex.avatar.compressor.editor.ui;
 using nadena.dev.ndmf.localization;
 using NUnit.Framework;
-using UnityEditor;
-using UnityEngine;
 using UnityEngine.TestTools;
 using static dev.limitex.avatar.compressor.tests.LocalizationTestCatalog;
 
@@ -19,206 +16,71 @@ namespace dev.limitex.avatar.compressor.tests
     [TestFixture]
     internal sealed class LocalizationReloadTests : LocalizationTestBase
     {
-        private TemporaryCatalog _temporaryCatalog;
+        private const string MainCategoryKey = "TextureCompressor:enum:texturePropertyCategoryMain";
 
-        [TearDown]
-        public void DeleteTemporaryCatalog()
+        [UnityTest]
+        public IEnumerator PreviewSearch_PoReimportInSameLanguage_RefreshesResultsAndCount()
         {
-            try
+            var catalog = Track(new TemporaryCatalog());
+            LanguagePrefs.Language = catalog.Language;
+            catalog.Import("before", MainCategoryKey);
+            yield return WaitForTranslation(MainCategoryKey, "before");
+
+            var search = new PreviewSearch(new SearchBoxControl("updated"));
+            var items = new[]
             {
-                _temporaryCatalog?.Dispose();
-            }
-            finally
-            {
-                _temporaryCatalog = null;
-            }
-        }
+                new TexturePreviewData { TextureType = TexturePropertyCategory.Main },
+            };
+            Assert.IsFalse(search.Matches(items[0]));
+            Assert.AreEqual(0, search.CountMatches(items));
 
-        [Test]
-        public void SearchCount_PoReimportInSameLanguage_UsesUpdatedTranslation()
-        {
-            const string key = "Tests:searchImport";
-            string assetPath = LocalizationFolder + "/en-US.po";
-            var package = UnityEditor.PackageManager.PackageInfo.FindForAssetPath(assetPath);
-            string path = Path.Combine(
-                package.resolvedPath,
-                assetPath.Substring(package.assetPath.Length + 1)
-            );
-            byte[] original = File.ReadAllBytes(path);
-            string originalText = Encoding.UTF8.GetString(original);
+            catalog.Import("updated", MainCategoryKey);
+            yield return WaitForTranslation(MainCategoryKey, "updated");
 
-            void ImportTranslation(string value)
-            {
-                File.WriteAllText(path, originalText + $"\nmsgid \"{key}\"\nmsgstr \"{value}\"\n");
-                AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
-            }
-
-            try
-            {
-                ImportTranslation("before");
-                LanguagePrefs.Language = "en-US";
-                var search = new SearchBoxControl("updated");
-                var items = new[] { key };
-                Func<string, bool> matches = id =>
-                    search.MatchesSearch(AvatarCompressorLocalization.Tr(id));
-                Assert.AreEqual(
-                    0,
-                    search.CountMatches(
-                        items,
-                        matches,
-                        (
-                            AvatarCompressorLocalization.CurrentLanguage,
-                            AvatarCompressorLocalization.CatalogRevision
-                        )
-                    )
-                );
-
-                ImportTranslation("updated");
-
-                Assert.AreEqual("updated", AvatarCompressorLocalization.Tr(key));
-                Assert.AreEqual(
-                    1,
-                    search.CountMatches(
-                        items,
-                        matches,
-                        (
-                            AvatarCompressorLocalization.CurrentLanguage,
-                            AvatarCompressorLocalization.CatalogRevision
-                        )
-                    )
-                );
-            }
-            finally
-            {
-                File.WriteAllBytes(path, original);
-                AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
-            }
-        }
-
-        [Test]
-        public void SearchCount_LocalizationReloadInSameLanguage_UsesUpdatedTranslation()
-        {
-            string path = CreateTempPo("en-US.po", "msgid \"kind\"\nmsgstr \"before\"\n");
-            bool live = true;
-            var localizer = new Localizer(
-                "en-US",
-                () =>
-                    live
-                        ? AvatarCompressorLocalization.LoadLocalizations(new[] { path })
-                        : new List<(string, Func<string, string>)>()
-            );
-
-            try
-            {
-                LanguagePrefs.Language = "en-US";
-                var search = new SearchBoxControl("updated");
-                var items = new[] { "kind" };
-                Func<string, bool> matches = key =>
-                    search.MatchesSearch(localizer.GetLocalizedString(key));
-                Assert.AreEqual(
-                    0,
-                    search.CountMatches(
-                        items,
-                        matches,
-                        (
-                            AvatarCompressorLocalization.CurrentLanguage,
-                            AvatarCompressorLocalization.CatalogRevision
-                        )
-                    )
-                );
-
-                CreateTempPo("en-US.po", "msgid \"kind\"\nmsgstr \"updated\"\n");
-                Localizer.ReloadLocalizations();
-
-                Assert.AreEqual("updated", localizer.GetLocalizedString("kind"));
-                Assert.AreEqual(
-                    1,
-                    search.CountMatches(
-                        items,
-                        matches,
-                        (
-                            AvatarCompressorLocalization.CurrentLanguage,
-                            AvatarCompressorLocalization.CatalogRevision
-                        )
-                    )
-                );
-            }
-            finally
-            {
-                live = false;
-                DeleteTempAsset(path);
-            }
+            Assert.IsTrue(search.Matches(items[0]));
+            Assert.AreEqual(1, search.CountMatches(items));
         }
 
         [UnityTest]
-        public IEnumerator CatalogChanges_AddedAndRecreatedLocale_RefreshesTranslationAndSearch()
+        public IEnumerator CatalogChanges_AddedDeletedAndRecreatedLocale_RefreshesTranslation()
         {
-            var catalog = _temporaryCatalog = new TemporaryCatalog();
+            var catalog = Track(new TemporaryCatalog());
             LanguagePrefs.Language = catalog.Language;
-            var search = new SearchBoxControl("translated");
-            var items = new[] { TemporaryCatalog.Key };
-            Func<string, bool> matches = key =>
-                search.MatchesSearch(AvatarCompressorLocalization.Tr(key));
-            Assert.AreEqual(
-                0,
-                search.CountMatches(
-                    items,
-                    matches,
-                    (
-                        AvatarCompressorLocalization.CurrentLanguage,
-                        AvatarCompressorLocalization.CatalogRevision
-                    )
-                )
-            );
+            yield return WaitForTranslation(TemporaryCatalog.Key, $"<{TemporaryCatalog.Key}>");
 
             catalog.Import();
             yield return WaitForTranslation(TemporaryCatalog.Key, "translated");
-
-            Assert.AreEqual(
-                1,
-                search.CountMatches(
-                    items,
-                    matches,
-                    (
-                        AvatarCompressorLocalization.CurrentLanguage,
-                        AvatarCompressorLocalization.CatalogRevision
-                    )
-                )
-            );
 
             catalog.Delete();
             yield return WaitForTranslation(TemporaryCatalog.Key, $"<{TemporaryCatalog.Key}>");
-            Assert.AreEqual(
-                0,
-                search.CountMatches(
-                    items,
-                    matches,
-                    (
-                        AvatarCompressorLocalization.CurrentLanguage,
-                        AvatarCompressorLocalization.CatalogRevision
-                    )
-                )
-            );
+
+            catalog.Import("recreated");
+            yield return WaitForTranslation(TemporaryCatalog.Key, "recreated");
+        }
+
+        [UnityTest]
+        public IEnumerator UntranslatedEntry_UsesEnglishFallback()
+        {
+            const string key = "Common:label:general";
+            string english = ReadMessages(LocalizationFolder + "/en-US.po")[key];
+            var catalog = Track(new TemporaryCatalog());
+            LanguagePrefs.Language = catalog.Language;
+
+            catalog.Import("translated", key);
+            yield return WaitForTranslation(key, "translated");
+
+            catalog.Import("", key);
+            yield return WaitForTranslation(key, english);
 
             catalog.Import();
-            yield return WaitForTranslation(TemporaryCatalog.Key, "translated");
-            Assert.AreEqual(
-                1,
-                search.CountMatches(
-                    items,
-                    matches,
-                    (
-                        AvatarCompressorLocalization.CurrentLanguage,
-                        AvatarCompressorLocalization.CatalogRevision
-                    )
-                )
-            );
+            yield return WaitForTranslation(key, english);
+            Assert.AreEqual("<missing:key>", AvatarCompressorLocalization.Tr("missing:key"));
         }
 
         [UnityTest]
         public IEnumerator CatalogChanges_MovedLocale_UsesOnlyFilesInsideCatalog()
         {
-            var catalog = _temporaryCatalog = new TemporaryCatalog();
+            var catalog = Track(new TemporaryCatalog());
             LanguagePrefs.Language = catalog.Language;
             _ = AvatarCompressorLocalization.Tr(TemporaryCatalog.Key);
 
@@ -236,7 +98,7 @@ namespace dev.limitex.avatar.compressor.tests
         [UnityTest]
         public IEnumerator CatalogReimport_NotifiesWithUpdatedTranslationInSameLanguage()
         {
-            var catalog = _temporaryCatalog = new TemporaryCatalog();
+            var catalog = Track(new TemporaryCatalog());
             LanguagePrefs.Language = catalog.Language;
             catalog.Import();
             yield return WaitForTranslation(TemporaryCatalog.Key, "translated");
@@ -261,122 +123,47 @@ namespace dev.limitex.avatar.compressor.tests
             }
         }
 
-        private static IEnumerator WaitForTranslation(string key, string expected)
+        [UnityTest]
+        public IEnumerator TemporaryCatalog_Aborted_RestoresOriginalFileAndGuid()
         {
-            yield return null;
-            double deadline = EditorApplication.timeSinceStartup + 5;
-            while (
-                AvatarCompressorLocalization.Tr(key) != expected
-                && EditorApplication.timeSinceStartup < deadline
-            )
+            string path = PhysicalPath(LocalizationFolder + "/ko-KR.po");
+            byte[] original = File.ReadAllBytes(path);
+            byte[] meta = File.ReadAllBytes(path + ".meta");
+            Assert.Throws<InvalidOperationException>(() =>
             {
-                yield return null;
-            }
-
-            Assert.AreEqual(expected, AvatarCompressorLocalization.Tr(key));
+                using var catalog = new TemporaryCatalog();
+                catalog.Import();
+                catalog.MoveOutside();
+                throw new InvalidOperationException("Simulated test failure");
+            });
+            yield return WaitForEditorCallbacks();
+            CollectionAssert.AreEqual(original, File.ReadAllBytes(path));
+            CollectionAssert.AreEqual(meta, File.ReadAllBytes(path + ".meta"));
         }
 
-        private sealed class TemporaryCatalog : IDisposable
+        [UnityTest]
+        public IEnumerator PreviewSearch_LanguageChange_RefreshesResultsAndCount()
         {
-            internal const string Key = "Tests:catalogLifecycle";
-            internal readonly string Language;
-            private readonly string _assetPath;
-            private readonly string _physicalPath;
-            private readonly string _outsidePath;
+            var catalog = Track(new TemporaryCatalog());
+            catalog.Import("test-main-category", MainCategoryKey);
+            LanguagePrefs.Language = catalog.Language;
+            yield return WaitForTranslation(MainCategoryKey, "test-main-category");
 
-            internal TemporaryCatalog()
-            {
-                var existing = new HashSet<string>(
-                    AvatarCompressorLocalization
-                        .LoadLocalizations()
-                        .Select(entry => entry.Language),
-                    StringComparer.OrdinalIgnoreCase
-                );
-                Language = CultureInfo
-                    .GetCultures(CultureTypes.SpecificCultures)
-                    .Select(culture => culture.Name)
-                    .First(language => !existing.Contains(language));
-                _assetPath = LocalizationFolder + "/" + Language + ".po";
-                var package = UnityEditor.PackageManager.PackageInfo.FindForAssetPath(_assetPath);
-                _physicalPath = Path.Combine(
-                    package.resolvedPath,
-                    _assetPath.Substring(package.assetPath.Length + 1)
-                );
-                _outsidePath = Path.Combine(
-                    Application.dataPath,
-                    "_LAC_Catalog_" + Guid.NewGuid().ToString("N") + ".po"
-                );
-                Assert.IsFalse(File.Exists(_physicalPath));
-                Assert.IsFalse(File.Exists(_physicalPath + ".meta"));
-            }
-
-            internal void Import(string translation = "translated")
-            {
-                File.WriteAllText(
-                    _physicalPath,
-                    $"msgid \"\"\nmsgstr \"\"\n\"Language: {Language}\\n\"\n\n"
-                        + $"msgid \"{Key}\"\nmsgstr \"{translation}\"\n"
-                );
-                AssetDatabase.ImportAsset(_assetPath, ImportAssetOptions.ForceSynchronousImport);
-            }
-
-            internal void MoveOutside() => Move(_physicalPath, _outsidePath);
-
-            internal void MoveBack() => Move(_outsidePath, _physicalPath);
-
-            private static void Move(string from, string to)
-            {
-                File.Move(from, to);
-                File.Move(from + ".meta", to + ".meta");
-                AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-            }
-
-            internal void Delete()
-            {
-                File.Delete(_physicalPath);
-                File.Delete(_physicalPath + ".meta");
-                File.Delete(_outsidePath);
-                File.Delete(_outsidePath + ".meta");
-                AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-            }
-
-            public void Dispose() => Delete();
-        }
-
-        [Test]
-        public void SearchCount_LanguageChange_UsesCurrentTranslation()
-        {
-            const string key = "Common:label:general";
             LanguagePrefs.Language = "en-US";
-            var search = new SearchBoxControl(AvatarCompressorLocalization.Tr(key));
-            var items = new[] { key };
-            Func<string, bool> matches = id =>
-                search.MatchesSearch(AvatarCompressorLocalization.Tr(id));
-            Assert.AreEqual(
-                1,
-                search.CountMatches(
-                    items,
-                    matches,
-                    (
-                        AvatarCompressorLocalization.CurrentLanguage,
-                        AvatarCompressorLocalization.CatalogRevision
-                    )
-                )
-            );
+            var search = new PreviewSearch(new SearchBoxControl("test-main-category"));
+            var items = new[]
+            {
+                new TexturePreviewData { TextureType = TexturePropertyCategory.Main },
+                new TexturePreviewData { TextureType = TexturePropertyCategory.Normal },
+            };
+            Assert.AreEqual(0, search.CountMatches(items));
+            Assert.IsFalse(search.Matches(items[0]));
 
-            LanguagePrefs.Language = "ja-JP";
-            int expected = matches(key) ? 1 : 0;
-            Assert.AreEqual(
-                expected,
-                search.CountMatches(
-                    items,
-                    matches,
-                    (
-                        AvatarCompressorLocalization.CurrentLanguage,
-                        AvatarCompressorLocalization.CatalogRevision
-                    )
-                )
-            );
+            LanguagePrefs.Language = catalog.Language;
+
+            Assert.AreEqual(1, search.CountMatches(items));
+            Assert.IsTrue(search.Matches(items[0]));
+            Assert.IsFalse(search.Matches(items[1]));
         }
     }
 }

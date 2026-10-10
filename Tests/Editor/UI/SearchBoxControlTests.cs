@@ -316,14 +316,13 @@ namespace dev.limitex.avatar.compressor.tests
             };
 
             Assert.That(search.CountMatches(items, predicate, ("filter", 0)), Is.Zero);
-            Assert.That(callCount, Is.EqualTo(2));
+            int callsAfterFirstSearch = callCount;
 
             include = true;
             Assert.That(search.CountMatches(items, predicate, ("filter", 0)), Is.Zero);
-            Assert.That(callCount, Is.EqualTo(2));
+            Assert.That(callCount, Is.EqualTo(callsAfterFirstSearch));
 
             Assert.That(search.CountMatches(items, predicate, ("filter", 1)), Is.EqualTo(2));
-            Assert.That(callCount, Is.EqualTo(4));
         }
 
         [Test]

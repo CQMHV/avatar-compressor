@@ -14,10 +14,16 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
     {
         private readonly PreviewGenerator _generator = new PreviewGenerator();
         private readonly SearchBoxControl _searchBox = new();
+        private readonly PreviewSearch _search;
         private TexturePreviewData[] _previewData;
         private int _previewSettingsHash;
         private bool _showPreview;
         private Vector2 _scrollPosition;
+
+        internal PreviewSection()
+        {
+            _search = new PreviewSearch(_searchBox);
+        }
 
         /// <summary>
         /// Draws the preview section.
@@ -95,14 +101,7 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
 
             bool isSearching = _searchBox.IsSearching;
             int totalCount = _previewData.Length;
-            int filteredCount = _searchBox.CountMatches(
-                _previewData,
-                MatchesPreviewSearch,
-                (
-                    AvatarCompressorLocalization.CurrentLanguage,
-                    AvatarCompressorLocalization.CatalogRevision
-                )
-            );
+            int filteredCount = _search.CountMatches(_previewData);
 
             // Build header text
             string headerText;
@@ -251,7 +250,7 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
                     var data = _previewData[i];
 
                     // Skip items that don't match search
-                    if (isSearching && !MatchesPreviewSearch(data))
+                    if (isSearching && !_search.Matches(data))
                         continue;
 
                     // Section headers
@@ -528,19 +527,6 @@ namespace dev.limitex.avatar.compressor.editor.texture.ui
             string reasonText = TextureCompressorEnumLabels.Text(data.SkipReason);
             EditorGUILayout.LabelField(reasonText, EditorStyles.miniLabel);
             EditorGUILayout.EndHorizontal();
-        }
-
-        private bool MatchesPreviewSearch(TexturePreviewData data)
-        {
-            string assetPath = GuidPathCache.GetPath(data.Guid);
-            string textureName = data.Texture != null ? data.Texture.name : "";
-
-            return _searchBox.MatchesSearchAny(
-                textureName,
-                assetPath,
-                data.TextureType.ToString(),
-                TextureCompressorEnumLabels.Text(data.TextureType)
-            );
         }
     }
 }

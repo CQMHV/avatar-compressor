@@ -1,16 +1,19 @@
 using System;
-using System.Reflection;
+using System.Collections;
+using System.Linq;
 using dev.limitex.avatar.compressor.editor.texture.ui;
 using dev.limitex.avatar.compressor.editor.ui;
+using nadena.dev.ndmf.localization;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Rendering;
+using UnityEngine.TestTools;
+using static dev.limitex.avatar.compressor.tests.LocalizationTestCatalog;
 
 namespace dev.limitex.avatar.compressor.tests
 {
     [TestFixture]
-    internal sealed class LocalizedEnumEditingTests
+    internal sealed class LocalizedEnumEditingTests : LocalizationTestBase
     {
         private CustomTextureCompressorPreset _first;
         private CustomTextureCompressorPreset _second;
@@ -21,10 +24,7 @@ namespace dev.limitex.avatar.compressor.tests
         [SetUp]
         public void SetUp()
         {
-            if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null)
-                Assert.Ignore(
-                    "IMGUI interaction tests require a graphics device; omit -nographics."
-                );
+            InspectorUiProbe.RequireGraphicsDevice();
 
             _first = ScriptableObject.CreateInstance<CustomTextureCompressorPreset>();
             _second = ScriptableObject.CreateInstance<CustomTextureCompressorPreset>();
@@ -61,6 +61,32 @@ namespace dev.limitex.avatar.compressor.tests
             Assert.IsTrue(_window.HasMixedValues);
             Assert.AreEqual(AnalysisStrategyType.Fast, _first.Strategy);
             Assert.AreEqual(AnalysisStrategyType.Combined, _second.Strategy);
+            Assert.IsFalse(_window.AppliedChanges);
+        }
+
+        [UnityTest]
+        public IEnumerator Popup_UsesLabelsFromCurrentLanguage()
+        {
+            const string key = "TextureCompressor:enum:analysisStrategyTypeFast";
+            const string expected = "Test fast strategy";
+            var catalog = Track(new TemporaryCatalog());
+            catalog.Import(expected, key);
+            LanguagePrefs.Language = catalog.Language;
+            yield return WaitForTranslation(key, expected);
+            _window.Draw();
+
+            CollectionAssert.Contains(_window.Options, expected);
+        }
+
+        [Test]
+        public void UnknownSerializedValue_DrawingWithoutInput_PreservesValue()
+        {
+            _first.Strategy = (AnalysisStrategyType)int.MaxValue;
+            _window.SetTargets(_first);
+
+            _window.Draw();
+
+            Assert.AreEqual((AnalysisStrategyType)int.MaxValue, _first.Strategy);
             Assert.IsFalse(_window.AppliedChanges);
         }
 
@@ -112,7 +138,6 @@ namespace dev.limitex.avatar.compressor.tests
             _window.Select(AnalysisStrategyType.Perceptual);
 
             Assert.AreEqual(AnalysisStrategyType.Perceptual, component.Strategy);
-            // Flush undo and refresh the serialized view to expose prefab overrides.
             Undo.FlushUndoRecordObjects();
             _window.Draw();
             Assert.IsTrue(_window.Property.prefabOverride);
@@ -129,12 +154,12 @@ namespace dev.limitex.avatar.compressor.tests
 
     internal sealed class LocalizedEnumTestWindow : EditorWindow
     {
-        private const string ControlName = "LAC enum under test";
         private SerializedObject _serialized;
-        private int _controlId;
+        private AnalysisStrategyType? _selection;
         private int _drawCount;
         private Exception _guiException;
         internal bool HasMixedValues { get; private set; }
+        internal string[] Options { get; private set; }
         internal bool AppliedChanges { get; private set; }
         internal SerializedProperty Property =>
             _serialized.FindProperty(nameof(CustomTextureCompressorPreset.Strategy));
@@ -152,17 +177,14 @@ namespace dev.limitex.avatar.compressor.tests
             try
             {
                 _serialized.Update();
-                HasMixedValues = Property.hasMultipleDifferentValues;
-                GUI.SetNextControlName(ControlName);
                 LocalizedEnumPopup.DrawProperty<AnalysisStrategyType>(
                     Property,
                     TextureCompressorPropertyLabels.Content(
                         nameof(CustomTextureCompressorPreset.Strategy)
                     ),
-                    TextureCompressorEnumLabels.Text
+                    TextureCompressorEnumLabels.Text,
+                    DrawPopup
                 );
-                GUI.FocusControl(ControlName);
-                _controlId = GUIUtility.keyboardControl;
                 AppliedChanges = _serialized.ApplyModifiedProperties();
                 _drawCount++;
             }
@@ -179,47 +201,39 @@ namespace dev.limitex.avatar.compressor.tests
             SendEvent(new Event { type = EventType.Repaint });
             Assert.IsNull(_guiException);
             Assert.Greater(_drawCount, before, "The test must execute the actual IMGUI control.");
-            Assert.Greater(_controlId, 0);
+        }
+
+        private int DrawPopup(Rect position, GUIContent label, int index, GUIContent[] options)
+        {
+            HasMixedValues = EditorGUI.showMixedValue;
+            Options = options.Select(option => option.text).ToArray();
+            int drawn = EditorGUI.Popup(position, label, index, options);
+            // Native popup menus have no public API for batchmode interaction.
+            if (
+                _selection.HasValue
+                && Event.current.type == EventType.ExecuteCommand
+                && Event.current.commandName == "LAC_SelectEnum"
+            )
+            {
+                int selected = Array.IndexOf(
+                    Enum.GetValues(typeof(AnalysisStrategyType)),
+                    _selection.Value
+                );
+                _selection = null;
+                GUI.changed = true;
+                Event.current.Use();
+                return selected;
+            }
+            return drawn;
         }
 
         internal void Select(AnalysisStrategyType value)
         {
-            // Inject Unity's popup callback because native menus cannot be driven in batchmode.
-            var callbackType = typeof(EditorGUI).GetNestedType(
-                "PopupCallbackInfo",
-                BindingFlags.NonPublic
-            );
-            Assert.IsNotNull(callbackType);
-            var instanceField = callbackType.GetField(
-                "instance",
-                BindingFlags.Public | BindingFlags.Static
-            );
-            object previous = instanceField.GetValue(null);
-            try
-            {
-                object callback = Activator.CreateInstance(
-                    callbackType,
-                    new object[] { _controlId }
-                );
-                callbackType
-                    .GetField("m_SelectedIndex", BindingFlags.Instance | BindingFlags.NonPublic)
-                    .SetValue(
-                        callback,
-                        Array.IndexOf(Enum.GetValues(typeof(AnalysisStrategyType)), value)
-                    );
-                instanceField.SetValue(null, callback);
-                AppliedChanges = false;
-                SendEvent(EditorGUIUtility.CommandEvent("PopupMenuChanged"));
-                Assert.IsNull(_guiException);
-                Assert.IsNull(
-                    instanceField.GetValue(null),
-                    "The popup must consume the selection command."
-                );
-            }
-            finally
-            {
-                instanceField.SetValue(null, previous);
-            }
+            _selection = value;
+            AppliedChanges = false;
+            SendEvent(EditorGUIUtility.CommandEvent("LAC_SelectEnum"));
+            Assert.IsNull(_guiException);
+            Assert.IsNull(_selection, "The popup renderer must consume the selection.");
         }
 
         private void OnDisable()
