@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added NDMF-based editor localization for English, Simplified Chinese, Traditional Chinese, Japanese, and Korean, with shared language switching in inspectors and Preferences.
+- Added a Preferences option to show or hide Editor Languages in compressor and custom preset inspectors (shown by default).
 - **Crowdin translation sync** - Upload English source changes from `main` and create or update translation pull requests weekly or on demand
   - Pull requests limited to `Editor/Common/Localization/` do not require a changelog entry
 - **Live translation updates** - Apply language changes and translation catalog updates to open compressor inspectors, custom preset inspectors, and Preferences

@@ -27,6 +27,12 @@ msgstr "Enable Logging"
 msgid "Common:prop:enableLogging:tooltip"
 msgstr "Output debug logs during build and preview"
 
+msgid "Common:prop:showLanguagePickerInInspector"
+msgstr "Show Editor Languages in Inspector"
+
+msgid "Common:prop:showLanguagePickerInInspector:tooltip"
+msgstr "Show the Editor Languages picker in compressor component and custom preset inspectors. Language can always be changed in Preferences."
+
 msgid "TextureCompressor:label:preferences"
 msgstr "Texture Compressor"
 

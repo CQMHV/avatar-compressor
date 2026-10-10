@@ -23,8 +23,11 @@ namespace dev.limitex.avatar.compressor.editor.texture
         {
             serializedObject.Update();
 
-            AvatarCompressorLocalization.DrawLanguagePicker();
-            EditorGUILayout.Space(8);
+            if (AvatarCompressorPreferences.ShowLanguagePickerInInspector)
+            {
+                AvatarCompressorLocalization.DrawLanguagePicker();
+                EditorGUILayout.Space(8);
+            }
 
             DrawHeader("TextureCompressor:label:presetSettings");
             DrawProperty(nameof(CustomTextureCompressorPreset.Lock));

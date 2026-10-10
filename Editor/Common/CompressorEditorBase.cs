@@ -30,8 +30,11 @@ namespace dev.limitex.avatar.compressor.editor
         {
             serializedObject.Update();
 
-            AvatarCompressorLocalization.DrawLanguagePicker();
-            EditorGUILayout.Space(8);
+            if (AvatarCompressorPreferences.ShowLanguagePickerInInspector)
+            {
+                AvatarCompressorLocalization.DrawLanguagePicker();
+                EditorGUILayout.Space(8);
+            }
 
             DrawAvatarRootWarningIfNeeded();
 

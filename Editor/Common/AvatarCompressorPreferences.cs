@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEngine;
 
 namespace dev.limitex.avatar.compressor.editor
@@ -13,6 +14,8 @@ namespace dev.limitex.avatar.compressor.editor
         public const string PrefsPrefix = "dev.limitex.avatar-compressor.";
         private const string BasePath = "Preferences/Avatar Compressor";
         private const string EnableLoggingKey = PrefsPrefix + "enableLogging";
+        private const string ShowLanguagePickerInInspectorKey =
+            PrefsPrefix + "showLanguagePickerInInspector";
 
         /// <summary>
         /// When true, debug log output is enabled during build and preview.
@@ -21,6 +24,15 @@ namespace dev.limitex.avatar.compressor.editor
         {
             get => EditorPrefs.GetBool(EnableLoggingKey, true);
             set => EditorPrefs.SetBool(EnableLoggingKey, value);
+        }
+
+        /// <summary>
+        /// Applies to both compressor component and custom preset inspectors.
+        /// </summary>
+        public static bool ShowLanguagePickerInInspector
+        {
+            get => EditorPrefs.GetBool(ShowLanguagePickerInInspectorKey, true);
+            set => EditorPrefs.SetBool(ShowLanguagePickerInInspectorKey, value);
         }
 
         /// <summary>
@@ -66,6 +78,11 @@ namespace dev.limitex.avatar.compressor.editor
 
             var keywords = new HashSet<string> { "Avatar", "Compressor", "LAC", "Log", "Debug" };
             keywords.UnionWith(AvatarCompressorLocalization.Translations("Common:label:language"));
+            keywords.UnionWith(
+                AvatarCompressorLocalization.Translations(
+                    "Common:prop:showLanguagePickerInInspector"
+                )
+            );
             foreach (var section in sections)
             {
                 keywords.UnionWith(section.Keywords);
@@ -96,6 +113,20 @@ namespace dev.limitex.avatar.compressor.editor
                         EditorStyles.boldLabel
                     );
                     AvatarCompressorLocalization.DrawLanguagePicker();
+
+                    EditorGUI.BeginChangeCheck();
+                    var showLanguagePickerInInspector = EditorGUILayout.ToggleLeft(
+                        AvatarCompressorLocalization.Content(
+                            "Common:prop:showLanguagePickerInInspector",
+                            "Common:prop:showLanguagePickerInInspector:tooltip"
+                        ),
+                        ShowLanguagePickerInInspector
+                    );
+                    if (EditorGUI.EndChangeCheck())
+                    {
+                        ShowLanguagePickerInInspector = showLanguagePickerInInspector;
+                        InternalEditorUtility.RepaintAllViews();
+                    }
 
                     foreach (var section in sections)
                     {
