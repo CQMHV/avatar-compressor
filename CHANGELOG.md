@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Preserve Git metadata when preparing the CI Unity project so GameCI can detect the repository before running tests.
 - Use Unity account credentials for Personal license activation in both GameCI workflows instead of passing a license file.
 
+### Fixed
+
+- Fix GameCI project setup, Unity license activation, and test reporting.
+
 ## [v0.9.0] - 2026-07-17
 
 ### Added
