@@ -103,6 +103,13 @@ namespace dev.limitex.avatar.compressor
         )]
         public bool BakeLilToonTextures = true;
 
+        [Tooltip(
+            "Reuse the final baked main texture for outlines only when both originally shared "
+                + "the same texture. This can change outline colors and transparency. Separate "
+                + "outline textures and protected textures are left unchanged. Requires texture baking."
+        )]
+        public bool ReuseBakedMainTextureForOutline = false;
+
         [Header("Size Filters")]
         [Tooltip("Only process textures larger than this size")]
         public int MinSourceSize = 256;
