@@ -103,10 +103,12 @@ namespace dev.limitex.avatar.compressor.tests
         }
 
         [Test]
-        public void Reuse_ProtectedSource_PreservesOutline()
+        public void Reuse_ProtectedSource_PreservesOutlineAndAliases()
         {
+            AddAlias("_BaseMap", _source);
             Assert.IsFalse(Reuse(isProtected: t => t == _source));
             Assert.AreSame(_source, _material.GetTexture("_OutlineTex"));
+            Assert.AreSame(_source, AliasTexture("_BaseMap"));
         }
 
         [Test]
@@ -121,6 +123,55 @@ namespace dev.limitex.avatar.compressor.tests
         {
             _material.SetTextureScale("_OutlineTex", new Vector2(2f, 1f));
             Assert.IsFalse(Reuse());
+        }
+
+        [Test]
+        public void Reuse_ClearsOnlyUnprotectedUndeclaredAliasesOfSource()
+        {
+            AddAlias("_BaseMap", _source);
+            AddAlias("_BaseColorMap", _source);
+            _material.SetTexture("_Main2ndTex", _source);
+
+            Assert.IsTrue(Reuse());
+            Assert.IsNull(AliasTexture("_BaseMap"));
+            Assert.IsNull(AliasTexture("_BaseColorMap"));
+            Assert.AreSame(_source, _material.GetTexture("_Main2ndTex"));
+        }
+
+        [Test]
+        public void Reuse_PreservesAnimatedAliasAndUnrelatedTexture()
+        {
+            AddAlias("_BaseMap", _source);
+            AddAlias("_BaseColorMap", _baked);
+            Assert.IsTrue(Reuse(new[] { "_BaseMap" }));
+            Assert.AreSame(_source, AliasTexture("_BaseMap"));
+            Assert.AreSame(_baked, AliasTexture("_BaseColorMap"));
+        }
+
+        private void AddAlias(string name, Texture texture)
+        {
+            var serialized = new SerializedObject(_material);
+            var entries = serialized.FindProperty("m_SavedProperties.m_TexEnvs");
+            int index = entries.arraySize;
+            entries.InsertArrayElementAtIndex(index);
+            var entry = entries.GetArrayElementAtIndex(index);
+            entry.FindPropertyRelative("first").stringValue = name;
+            entry.FindPropertyRelative("second.m_Texture").objectReferenceValue = texture;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        private Texture AliasTexture(string name)
+        {
+            var serialized = new SerializedObject(_material);
+            var entries = serialized.FindProperty("m_SavedProperties.m_TexEnvs");
+            for (int i = 0; i < entries.arraySize; i++)
+            {
+                var entry = entries.GetArrayElementAtIndex(i);
+                if (entry.FindPropertyRelative("first").stringValue == name)
+                    return entry.FindPropertyRelative("second.m_Texture").objectReferenceValue
+                        as Texture;
+            }
+            return null;
         }
 
         [TestCase(false, false)]
@@ -163,6 +214,8 @@ namespace dev.limitex.avatar.compressor.tests
                 _source.Apply();
                 material.SetTexture("_MainTex", _source);
                 material.SetTexture("_OutlineTex", _source);
+                material.SetTexture("_BaseMap", _source);
+                material.SetTexture("_BaseColorMap", _source);
                 material.SetTexture("_BacklightColorTex", _source);
                 material.SetVector("_MainTexHSVG", new Vector4(0f, 0.7f, 0.8f, 1f));
                 var outlineTone = reuse
@@ -183,8 +236,17 @@ namespace dev.limitex.avatar.compressor.tests
                     material.GetTexture("_OutlineTex")
                 );
                 Assert.AreSame(_source, material.GetTexture("_BacklightColorTex"));
+                Assert.AreSame(
+                    reuse ? material.GetTexture("_MainTex") : _source,
+                    material.GetTexture("_BaseMap")
+                );
+                Assert.AreSame(
+                    reuse ? material.GetTexture("_MainTex") : _source,
+                    material.GetTexture("_BaseColorMap")
+                );
                 Assert.AreSame(_source, original.GetTexture("_MainTex"));
                 Assert.AreSame(_source, original.GetTexture("_OutlineTex"));
+                Assert.AreSame(_source, original.GetTexture("_BaseMap"));
                 Assert.AreEqual(outlineTone, material.GetVector("_OutlineTexHSVG"));
                 if (alphaMask)
                     Assert.AreEqual(0f, material.GetFloat("_AlphaMaskMode"));
@@ -194,6 +256,39 @@ namespace dev.limitex.avatar.compressor.tests
                 UnityEngine.Object.DestroyImmediate(material);
                 UnityEngine.Object.DestroyImmediate(original);
                 baker.DestroyOrphanedBakes(Array.Empty<Material>());
+            }
+        }
+
+        [Test]
+        public void Reuse_DeclaredLilToonAliases_PreservesAnimatedAndFilteredBindings()
+        {
+            var shader = Shader.Find("Hidden/lilToonOutline");
+            if (shader == null)
+                Assert.Ignore("lilToon is not installed.");
+            var material = new Material(shader);
+            try
+            {
+                material.SetTexture("_MainTex", _baked);
+                material.SetTexture("_OutlineTex", _source);
+                material.SetTexture("_BaseMap", _source);
+                material.SetTexture("_BaseColorMap", _source);
+                Assert.IsTrue(
+                    LilToonTextureBaker.TryReuseBakedMainTextureForOutline(
+                        material,
+                        _source,
+                        _source,
+                        new[] { "_BaseMap" },
+                        (t, p) => p != "_BaseColorMap",
+                        null
+                    )
+                );
+                Assert.AreSame(_baked, material.GetTexture("_OutlineTex"));
+                Assert.AreSame(_source, material.GetTexture("_BaseMap"));
+                Assert.AreSame(_source, material.GetTexture("_BaseColorMap"));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(material);
             }
         }
 
@@ -226,6 +321,8 @@ namespace dev.limitex.avatar.compressor.tests
                 config.TargetPlatform = CompressionPlatform.Desktop;
                 material.SetTexture("_MainTex", _source);
                 material.SetTexture("_OutlineTex", _source);
+                material.SetTexture("_BaseMap", _source);
+                material.SetTexture("_BaseColorMap", _source);
                 material.SetVector("_MainTexHSVG", new Vector4(0f, 0.7f, 0.8f, 1f));
                 var renderer = root.AddComponent<MeshRenderer>();
                 renderer.sharedMaterial = material;
@@ -257,6 +354,8 @@ namespace dev.limitex.avatar.compressor.tests
                 );
                 Assert.AreNotSame(_source, clone.GetTexture("_MainTex"));
                 Assert.AreSame(clone.GetTexture("_MainTex"), clone.GetTexture("_OutlineTex"));
+                Assert.AreSame(clone.GetTexture("_MainTex"), clone.GetTexture("_BaseMap"));
+                Assert.AreSame(clone.GetTexture("_MainTex"), clone.GetTexture("_BaseColorMap"));
                 Assert.IsTrue(textures.Values.Contains(clone.GetTexture("_MainTex")));
                 baker.DestroyOrphanedBakes(materials.Values);
                 Assert.IsTrue(clone.GetTexture("_OutlineTex") != null);

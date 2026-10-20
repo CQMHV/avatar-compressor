@@ -312,7 +312,59 @@ namespace dev.limitex.avatar.compressor.editor.texture.integrations
                 return false;
 
             material.SetTexture(OutlineTexProperty, bakedMain);
+            UpdateMainTextureAliases(
+                material,
+                originalMainTexture,
+                bakedMain,
+                animatedProperties,
+                canReplaceTexture
+            );
             return true;
+        }
+
+        // lilToon's inspector mirrors _MainTex into these compatibility properties. Keep
+        // declared lilToon aliases in sync so the collector compresses the shared bake once.
+        // Shader switching can also leave undeclared aliases; remove those stale dependencies.
+        private static void UpdateMainTextureAliases(
+            Material material,
+            Texture2D source,
+            Texture2D bakedMain,
+            IReadOnlyCollection<string> animatedProperties,
+            Func<Texture2D, string, bool> canReplaceTexture
+        )
+        {
+            using var serialized = new UnityEditor.SerializedObject(material);
+            var textures = serialized.FindProperty("m_SavedProperties.m_TexEnvs");
+            if (textures == null || !textures.isArray)
+                return;
+
+            for (int i = textures.arraySize - 1; i >= 0; i--)
+            {
+                var entry = textures.GetArrayElementAtIndex(i);
+                string name = entry.FindPropertyRelative("first").stringValue;
+                if (
+                    (name != "_BaseMap" && name != "_BaseColorMap")
+                    || animatedProperties.Contains(name)
+                    || animatedProperties.Contains(name + "_ST")
+                    || entry.FindPropertyRelative("second.m_Texture").objectReferenceValue != source
+                )
+                    continue;
+
+                if (material.HasProperty(name))
+                {
+                    if (
+                        IsLilToonShader(material.shader)
+                        && (canReplaceTexture == null || canReplaceTexture(source, name))
+                    )
+                        entry.FindPropertyRelative("second.m_Texture").objectReferenceValue =
+                            bakedMain;
+                }
+                else
+                {
+                    textures.DeleteArrayElementAtIndex(i);
+                }
+            }
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         private BakeOutcome BakeMainTexture(
